@@ -1,0 +1,129 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: #fff;
+  font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* 共通：非表示制御 */
+.hidden {
+  display: none !important;
+}
+
+/* 会話シーン */
+.dialog {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  background: #000;
+  z-index: 10;
+}
+.dialog .bg {
+  position: absolute;
+  inset: 0;
+  background: #000 no-repeat center/cover;
+  z-index: -1; /* ← キャラやウィンドウよりも後ろに回す */
+}
+.char {
+  position: absolute;
+  bottom: 0;
+  width: 40%;
+  max-height: 90%;
+  object-fit: contain;
+  z-index: 1;
+}
+.left { left: 2%; }
+.right { right: 2%; }
+.window {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 900px;
+  min-height: 140px;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  z-index: 2;
+}
+.name {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.text {
+  white-space: pre-line;
+  line-height: 1.7;
+  min-height: 80px;
+}
+.next {
+  position: absolute;
+  right: 14px;
+  bottom: 8px;
+  font-size: 18px;
+  opacity: 0.8;
+  animation: blink 1s steps(2,end) infinite;
+}
+@keyframes blink { 50% { opacity: 0.3; } }
+
+/* ナレーション */
+#narration {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+}
+#narr-text {
+  font-size: 28px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 2s;
+  white-space: pre-line;
+}
+#narr-text.show { opacity: 1; }
+
+/* スタッフロール */
+.staffroll {
+  display: none;
+  position: absolute;
+  bottom: -100%;
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  line-height: 2;
+  animation: scroll 30s linear forwards;
+}
+.staffroll img.logo {
+  width: 200px;
+  margin-top: 40px;
+}
+@keyframes scroll {
+  from { bottom: -100%; }
+  to   { bottom: 100%; }
+}
+
+/* クリアメッセージ */
+#clear-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  font-weight: bold;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 2.5s ease;
+  z-index: 50;
+}
+#clear-message.show {
+  opacity: 1;
+}

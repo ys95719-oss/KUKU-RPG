@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>オープニング | 九九RPG 〜勇者と失われた九九の力〜</title>
+  <style>
+    :root{ --fg:#fff; --bg:#000; --border:#fff; --win:#000000bf; }
+    html,body{
+      height:100%; margin:0; background:#000; color:var(--fg);
+      font-family:"Arial","Hiragino Kaku Gothic ProN","Meiryo",sans-serif; overflow:hidden;
+    }
+    .screen{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+    .hidden{display:none !important;}
+
+    /* フェードレイヤ */
+    #fade{position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity 420ms ease; z-index:12;}
+    #fade.show{opacity:1;}
+
+    /* オーディオ解放オーバーレイ（BGMブロック時のみ） */
+    #tap-overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000000d0; z-index:20;}
+    #tap-overlay .box{border:1px solid #fff; border-radius:10px; padding:18px 22px; text-align:center; line-height:1.7;}
+    #tap-overlay .btn{margin-top:12px; display:inline-block; border:2px solid #fff; padding:8px 14px; border-radius:8px; cursor:pointer;}
+
+    /* ナレーション（黒背景・白文字）…自動送りのみ・クリック無効 */
+    #narration{
+      background:#000; text-align:center; padding:24px;
+      z-index:15; pointer-events:none;
+    }
+    #narration .line{
+      max-width:980px; line-height:1.9; font-size:clamp(18px,3.0vw,28px);
+      white-space:pre-line; opacity:0;
+    }
+    /* ゆっくり目：3.2sアニメ ＋ 0.3s余白 ≒ 3.5s/行 */
+    #narration .line.show{ animation: fadeInHoldOut 3200ms ease both; }
+    @keyframes fadeInHoldOut{
+      0%{opacity:0} 20%{opacity:1} 80%{opacity:1} 100%{opacity:0}
+    }
+
+    /* 会話（DQ風） */
+    #dialogue{
+      position:relative; background:transparent; z-index:10;
+      display:flex; align-items:center; justify-content:center;
+      opacity:1;
+      min-width:100vw; min-height:100vh; visibility:visible;
+    }
+
+    /* 背景画像：全面フィット */
+    #bg-village{
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      object-fit:cover; z-index:0; filter:brightness(.9) saturate(1);
+      background:#000;
+    }
+
+    /* 立ち絵（★強調/減光用の演出追加） */
+    .char{
+      position:absolute; bottom:0; width:min(44vw, 460px); max-height:96vh;
+      object-fit:contain; pointer-events:none; z-index:1;
+      transition: opacity .25s ease, filter .25s ease, transform .25s ease;
+    }
+
+    /* ★立ち位置入れ替え：勇者=左、村長=右 */
+    .hero { left:2vw; }     /* ← 勇者を左 */
+    .chief{ right:2vw; }    /* → 村長を右 */
+
+    /* ★話者強調＆非話者減光 */
+    .char.dim   { opacity:.35; filter:grayscale(20%); }
+    .char.focus { opacity:1; transform:translateY(-4px); filter:none; }
+
+    .window{
+      position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+      width:min(94vw,1000px); min-height:170px; box-sizing:border-box;
+      border:3px solid var(--border); border-radius:10px; padding:14px 16px; background:var(--win);
+      z-index:2;
+    }
+    .name{font-weight:bold; margin-bottom:8px; font-size:18px;}
+    .text{white-space:pre-line; line-height:1.7; font-size:20px; min-height:98px;}
+    .next{position:absolute; right:12px; bottom:8px; font-size:18px; opacity:.85; animation:blink 1s steps(2,end) infinite;}
+    @keyframes blink{50%{opacity:.25}}
+
+    /* 「旅に出る」ボタン */
+    .primary{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:#1565c0; color:#fff; border:none; border-radius:10px;
+      font-size:20px; padding:14px 22px; cursor:pointer;
+      box-shadow:0 6px 16px rgba(0,0,0,.35); display:none; z-index:40;;
+    }
+
+    
+  </style>
+</head>
+<body>
+  <!-- フェード -->
+  <div id="fade"></div>
+
+  <!-- オーディオ解放オーバーレイ -->
+  <div id="tap-overlay" class="hidden">
+    <div class="box">
+      BGMの自動再生がブロックされました。<br>画面をタップ（またはクリック）すると開始します。
+      <div class="btn" id="tap-start">タップして開始</div>
+    </div>
+  </div>
+
+  <!-- BGM / SFX -->
+  <audio id="openingBgm" loop preload="auto">
+    <source src="music/opening.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="villageBgm" loop preload="auto">
+    <source src="music/village.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="clickSfx" preload="auto">
+    <source src="music/click.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- 画像プリロード（黒画面対策） -->
+  <script>
+    const preloadList = [
+      "images/backgrounds/village.png",
+      "images/characters/village-chief.png",
+      "images/characters/Hero.png"
+    ];
+    function preloadImage(src){
+      return new Promise((resolve,reject)=>{
+        const img = new Image();
+        img.onload  = ()=>{ console.log("[IMG OK]", src); resolve(src); };
+        img.onerror = ()=>{ console.warn("[IMG NG]", src); reject(new Error(src)); };
+        img.src = src;
+      });
+    }
+    const preloadAll = Promise.race([
+      Promise.all(preloadList.map(preloadImage)),
+      new Promise(r=>setTimeout(r, 3000))
+    ]);
+  </script>
+
+  <!-- ナレーション（自動送りのみ） -->
+  <section id="narration" class="screen">
+    <div id="nText" class="line"></div>
+  </section>
+
+  <!-- 会話画面 -->
+  <section id="dialogue" class="screen hidden" aria-label="会話シーン">
+    <img id="bg-village" src="images/backgrounds/village.png" alt="村の背景" loading="eager" decoding="async">
+    <!-- ★classの順序だけ注意（hero / chief） -->
+    <img id="hero"  class="char hero"  src="images/characters/Hero.png"           alt="勇者" loading="lazy" decoding="async">
+    <img id="chief" class="char chief" src="images/characters/village-chief.png"  alt="村長" loading="lazy" decoding="async">
+
+    <div class="window" role="dialog" aria-live="polite" aria-label="会話ウィンドウ">
+      <div class="name" id="dlg-name"></div>
+      <div class="text" id="dlg-text"></div>
+      <div class="next">▶</div>
+    </div>
+  </section>
+
+  <button id="to-battle" class="primary">旅に出る</button>
+
+  
+
+  <script>
+    
+    /* 要素 */
+    const fadeLayer  = document.getElementById('fade');
+    const tapOverlay = document.getElementById('tap-overlay');
+    const tapStartBtn= document.getElementById('tap-start');
+
+    const openingBgm = document.getElementById('openingBgm');
+    const villageBgm = document.getElementById('villageBgm');
+    const clickSfx   = document.getElementById('clickSfx');
+
+    const scrNarr = document.getElementById('narration');
+    const nText   = document.getElementById('nText');
+
+    const scrDlg  = document.getElementById('dialogue');
+    const dlgName = document.getElementById('dlg-name');
+    const dlgText = document.getElementById('dlg-text');
+    const toBattleBtn = document.getElementById('to-battle');
+
+    const heroImg  = document.getElementById('hero');
+    const chiefImg = document.getElementById('chief');
+
+    // 画像ロードログ
+    ["bg-village","chief","hero"].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener("error", ()=> dlog("[ERROR] img load fail:", id, "src=", el.getAttribute('src')));
+      el.addEventListener("load",  ()=> dlog("[LOAD ] img loaded   :", id));
+    });
+
+    /* フェーズ管理： narration -> dialogue */
+    let phase = "narration";
+
+    /* BGMユーティリティ */
+    async function tryAutoplay(audio){
+      try{ audio.volume = 0.85; await audio.play(); return true; }
+      catch{ return false; }
+    }
+    function fadeOut(audio, ms=700){
+      return new Promise(res=>{
+        if (audio.paused) return res();
+        const start = audio.volume ?? 0.85;
+        const t0 = performance.now();
+        const step = (t)=>{
+          const k = Math.min(1, (t - t0)/ms);
+          audio.volume = start * (1-k);
+          if (k>=1){ audio.pause(); audio.volume = start; return res(); }
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+    function fadeIn(audio, ms=700){
+      return new Promise(async res=>{
+        const target=0.85; audio.volume=0;
+        try{ await audio.play(); }catch{}
+        const t0 = performance.now();
+        const step = (t)=>{
+          const k = Math.min(1, (t - t0)/ms);
+          audio.volume = target * k;
+          if (k>=1) return res();
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    /* ナレーション：逐次実行（自動送りのみ） */
+    const narration = [
+      "むかし—— ひとびとは『九九（くく）の力』で\nくらしをささえ、せかいは へいわでした。",
+      "しかし だいまおうのふっかつとともに、\nおびただしいモンスターが せかいに あふれだし……",
+      "モンスターは ひとびとの九九の力を うばい、\n学びと くらしは だいこんらんに おちいりました。",
+      "そんな中、ただひとり、\n九九の力をのこす者—— それが『ゆうしゃ』です。"
+    ];
+    const DURATION_MS = 3200;  // CSSアニメ時間
+    const PADDING_MS  = 300;   // 余白
+
+    async function animateLineOnce(textEl, str){
+      textEl.classList.remove('show');
+      textEl.style.opacity = 0;
+      textEl.textContent = str;
+      void textEl.offsetWidth;          // 強制リフロー
+      textEl.classList.add('show');
+      await Promise.race([
+        new Promise(res => textEl.addEventListener('animationend', res, {once:true})),
+        new Promise(res => setTimeout(res, DURATION_MS + 120))
+      ]);
+      await new Promise(res => setTimeout(res, PADDING_MS));
+    }
+
+    async function runNarrationSequence(){
+      for (const line of narration){
+        await animateLineOnce(nText, line);
+      }
+
+      // —— 会話へ遷移：openingBgm停止 → 黒フェード → 会話表示 → villageBgmフェードイン
+      phase = "dialogue";
+      openingBgm.pause();
+      openingBgm.currentTime = 0;
+
+      fadeLayer.classList.add('show');
+      await new Promise(r=> setTimeout(r, 360));
+      scrNarr.classList.add('hidden');
+
+      scrDlg.classList.remove('hidden');
+      scrDlg.style.display = "flex";
+      scrDlg.style.opacity = "1";
+      scrDlg.style.zIndex  = "30";
+      scrDlg.style.position = "absolute";
+      scrDlg.style.inset = "0";
+
+      try { await preloadAll; } catch(_){}
+
+      await Promise.race([fadeIn(villageBgm, 760), new Promise(r=> setTimeout(r, 800))]);
+
+      setTimeout(()=> { fadeLayer.classList.remove('show'); }, 180);
+      setTimeout(()=> { scrDlg.style.zIndex = "10"; }, 900);
+
+      startDialogue();
+    }
+
+    /* ★話者ハイライト制御 */
+    function focusSpeaker(name){
+      // name が「ゆうしゃ」なら勇者を強調、村長を減光。逆も同様
+      const isHeroSpeaking  = /ゆうしゃ/.test(name);
+      const isChiefSpeaking = /村長/.test(name);
+
+      heroImg.classList.remove('focus','dim');
+      chiefImg.classList.remove('focus','dim');
+
+      if (isHeroSpeaking){
+        heroImg.classList.add('focus');
+        chiefImg.classList.add('dim');
+      } else if (isChiefSpeaking){
+        chiefImg.classList.add('focus');
+        heroImg.classList.add('dim');
+      } else {
+        // 不明時は両方通常
+      }
+    }
+
+    /* 会話台本 */
+    const lines = [
+      { name:"村長",   text:"よく来た、ゆうしゃよ……。 町の子どもたちから\n『九九の力』が うばわれ、べんきょうが ままならんのだ。" },
+      { name:"ゆうしゃ", text:"だいじょうぶです。 わたしには まだ『九九』がのこっています。\n取りもどして みせます！" },
+      { name:"村長",   text:"モンスターは『九九の門』を つくり、\nもんだいを とかなければ まおうを たおせぬけっかいを はったらしい。" },
+      { name:"ゆうしゃ", text:"つまり、たたかいながら 九九を となえれば、\nみんなの ちからも 少しずつ もどってくる……。" },
+      { name:"村長",   text:"そのとおりじゃ。 ゆうしゃよ、どうか せかいの学びを すくってくれ！" },
+      { name:"ゆうしゃ", text:"まかせてください。 かならず まおうを たおし、せかいを すくってみせます！" }
+    ];
+    let lineIdx = 0;
+
+    function setDialogue(i){
+      dlgName.textContent = lines[i].name;
+      dlgText.textContent = lines[i].text;
+      focusSpeaker(lines[i].name);   // ★話者に応じて立ち絵を強調/減光
+    }
+    function startDialogue(){
+      lineIdx = 0;
+      setDialogue(lineIdx);
+    }
+
+    // クリック：次のセリフ。最後はボタン表示
+    scrDlg.addEventListener('click', ()=>{
+      clickSfx.currentTime = 0; clickSfx.play().catch(()=>{});
+      lineIdx++;
+      if (lineIdx < lines.length){
+        setDialogue(lineIdx);
+      } else {
+        toBattleBtn.style.display = 'inline-block';   // ★必ず表示
+      }
+    });
+
+    // 「旅に出る」→ バトルへ
+    toBattleBtn.addEventListener('click', async ()=>{
+      clickSfx.currentTime = 0; clickSfx.play().catch(()=>{});
+      fadeLayer.classList.add('show');
+      await Promise.race([ (async()=>{ try{ await fadeOut(villageBgm, 650);}catch{}})(), new Promise(r=> setTimeout(r, 680))]);
+      await new Promise(r=> setTimeout(r, 200));
+      window.location.href = 'battle.html'; // 必要に応じてパス変更
+    });
+
+    /* 初期化 */
+    (async function init(){
+      // opening BGM 自動再生（失敗時はタップ誘導）
+      const ok = await tryAutoplay(openingBgm);
+      if (!ok){
+        tapOverlay.classList.remove('hidden');
+        tapStartBtn.addEventListener('click', async ()=>{
+          tapOverlay.classList.add('hidden');
+          try{ await openingBgm.play(); }catch{}
+        }, {once:true});
+      }
+
+      // iOS保険：最初のタップでオーディオ解放（フェーズに応じて再生）
+      document.addEventListener('pointerdown', function once(){
+        if (phase === "narration"){ openingBgm.play().catch(()=>{}); }
+        else { villageBgm.play().catch(()=>{}); }
+        clickSfx.play().catch(()=>{});   clickSfx.pause();   clickSfx.currentTime=0;
+        document.removeEventListener('pointerdown', once);
+      }, {once:true});
+
+      // ナレーション開始（逐次実行）
+      runNarrationSequence();
+
+      // 状態ログ（任意）
+      window.addEventListener('load', ()=>{
+        dlog("[STATE] narr hidden? "+scrNarr.classList.contains('hidden'));
+        dlog("[STATE] dlg  hidden? "+scrDlg.classList.contains('hidden'));
+        dlog("[PHASE] "+phase);
+        dlog("[SRC] bg : "+document.getElementById('bg-village')?.getAttribute('src'));
+        dlog("[SRC] chief: "+document.getElementById('chief')?.getAttribute('src'));
+        dlog("[SRC] hero : "+document.getElementById('hero')?.getAttribute('src'));
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>九九RPG ～勇者と失われた九九の力～ | タイトル</title>
+  <style>
+    body{
+      margin:0; padding:0; background:#000; color:#fff;
+      font-family:"Arial",sans-serif; overflow:hidden;
+    }
+    #title-bg{
+      position:fixed; inset:0; width:100%; height:100%;
+      object-fit:cover; z-index:-1;
+    }
+    #game-title{
+      position:absolute; top:20%; left:50%; transform:translateX(-50%);
+      font-size:48px; font-weight:bold; text-align:center; line-height:1.5;
+      text-shadow:3px 3px 6px #000; user-select:none;
+    }
+    #start-btn{
+      position:absolute; top:65%; left:50%; transform:translateX(-50%);
+      padding:15px 30px; font-size:22px; background:#1565c0; color:#fff;
+      border:none; border-radius:10px; cursor:pointer;
+      box-shadow:0 4px 8px rgba(0,0,0,.5);
+      transition:background-color .25s, transform .1s, opacity .2s;
+    }
+    #start-btn:hover{ background:#0d47a1; }
+    #start-btn:active{ transform:translateX(-50%) scale(.98); }
+    #start-btn:disabled{ opacity:.6; cursor:default; }
+
+    /* 画面フェード（遷移直前に短く） */
+    #fade{ pointer-events:none; position:fixed; inset:0; background:#000; opacity:0; transition:opacity 200ms ease; z-index:10; }
+    #fade.active{ opacity:1; }
+
+    /* 最小限のガイダンス（自動再生失敗時のみ表示） */
+    #tap-hint{
+      position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,.6); border:1px solid #fff; border-radius:8px;
+      padding:6px 10px; font-size:12px; opacity:0; transition:opacity .25s;
+      pointer-events:none;
+    }
+    #tap-hint.show{ opacity:1; }
+  </style>
+</head>
+<body>
+  <img id="title-bg" src="images/backgrounds/title-castle.png" alt="タイトル背景" loading="eager" decoding="async">
+
+  <div id="game-title">九九RPG<br>～勇者と失われた九九の力～</div>
+
+  <button id="start-btn" aria-label="ゲームを開始">スタート</button>
+
+  <div id="fade"></div>
+  <div id="tap-hint">タップで音声を有効化</div>
+
+  <!-- タイトルBGM：自動再生を試みる。失敗したらクリック時に解放して即再生 -->
+  <audio id="title-bgm" autoplay loop preload="auto">
+    <source src="music/title.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- 決定音：クリック時に再生して「鳴り切る」→遷移 -->
+  <audio id="decision-sound" preload="auto">
+    <source src="music/decision.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const bgm = document.getElementById('title-bgm');
+    const decision = document.getElementById('decision-sound');
+    const startBtn = document.getElementById('start-btn');
+    const fade = document.getElementById('fade');
+    const tapHint = document.getElementById('tap-hint');
+
+    // ---- タイトルBGMの自動再生を試みる（ユーザー操作なし）----
+    // 失敗したらヒント表示＆最初のクリックで解放して即再生
+    (async () => {
+      try {
+        bgm.volume = 0.8;
+        await bgm.play(); // 成功すればそのまま流し続ける
+      } catch (e) {
+        // 自動再生ブロック → ヒントを出し、最初の操作で解放
+        tapHint.classList.add('show');
+        const unlock = async () => {
+          tapHint.classList.remove('show');
+          document.removeEventListener('pointerdown', unlock, { once:true });
+          try {
+            bgm.volume = 0.8;
+            await bgm.play(); // ここで確実に鳴らす
+          } catch(_) {}
+        };
+        document.addEventListener('pointerdown', unlock, { once:true });
+      }
+    })();
+
+    // Enter / Spaceでも開始
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !startBtn.disabled) {
+        e.preventDefault();
+        startBtn.click();
+      }
+    });
+
+    // ---- スタート：決定音が鳴り切るまで待ってから遷移。BGMは直前まで流す ----
+    let transitioning = false;
+    startBtn.addEventListener('click', async () => {
+      if (transitioning) return;
+      transitioning = true;
+      startBtn.disabled = true;
+
+      // 決定音を再生（BGMは流しっぱなし）
+      const endedP = new Promise(res => decision.addEventListener('ended', res, { once:true }));
+      try {
+        decision.currentTime = 0;
+        await decision.play();
+      } catch (_) {
+        // 鳴らなかった場合は短い待ち時間でフォールバック
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      // 決定音が終わるのを待つ（最大1.6sフォールバック）
+      await Promise.race([ endedP, new Promise(r => setTimeout(r, 1600)) ]);
+
+      // 遷移直前に軽くフェード
+      fade.classList.add('active');
+      await new Promise(r => setTimeout(r, 180));
+
+      // openingへ。BGMはここで自然に途切れる（切替先で別BGM再生）
+      window.location.href = 'opening.html';
+    });
+  </script>
+</body>
+</html>

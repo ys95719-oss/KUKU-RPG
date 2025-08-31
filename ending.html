@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>エンディング | 九九RPG</title>
+  <link rel="stylesheet" href="css/ending.css">
+</head>
+<body>
+  <!-- 会話ウィンドウ（勇者と魔王 / 村長と勇者で使い回し） -->
+  <div id="dialog" class="dialog">
+    <div class="bg"></div>
+    <img id="left-char" class="char left" src="" alt="">
+    <img id="right-char" class="char right" src="" alt="">
+    <div class="window">
+      <div id="name" class="name"></div>
+      <div id="text" class="text"></div>
+      <div class="next">▶</div>
+    </div>
+  </div>
+
+  <!-- ナレーション -->
+  <div id="narration" class="narration hidden">
+    <div id="narr-text" class="narr-line"></div>
+  </div>
+
+  <!-- スタッフロール -->
+  <div id="staffroll" class="staffroll"></div>
+
+  <!-- クリアメッセージ -->
+  <div id="clear-message">クリアおめでとう！</div>
+
+  <!-- エンディングBGM -->
+  <audio id="ending-bgm" src="music/ending.mp3" loop></audio>
+
+  <script src="js/ending.js"></script>
+</body>
+</html>

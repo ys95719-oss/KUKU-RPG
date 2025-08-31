@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>バトル | 九九RPG</title>
+  <link rel="stylesheet" href="css/battle.css">
+</head>
+<body>
+  <!-- 背景 -->
+  <img id="bg" src="images/backgrounds/grassland.png" alt="バトル背景">
+
+  <!-- イントロ -->
+  <section id="intro">
+    <img src="images/characters/Slime.png" alt="スラッピー">
+    <div class="bubble">ピピッ！ここからさきには いかせないぞ！</div>
+  </section>
+
+  <!-- HUD -->
+  <div id="hud" class="hud hidden">
+    <div class="box">
+      ゆうしゃ Lv.<span id="hero-lv">1</span>
+      <div class="hpbar"><div id="hp-hero"></div></div>
+      <div class="hpbar sp"><div id="sp-bar"></div></div>
+    </div>
+    <div class="box center">
+      <div id="question" class="question">???</div>
+    </div>
+    <div class="box">
+      <span id="enemy-name">スラッピー</span>
+      <div class="hpbar"><div id="hp-enemy"></div></div>
+    </div>
+  </div>
+
+  <!-- フィールド -->
+  <div id="field" class="field hidden">
+    <img id="hero-img" class="hero" src="images/characters/Hero.png" alt="勇者">
+    <img id="enemy-img" class="enemy" src="images/characters/Slime.png" alt="スラッピー">
+  </div>
+
+  <!-- 入力パネル -->
+  <div id="panel" class="panel hidden">
+    <div class="answer">
+      <input id="answer" type="tel" inputmode="numeric" placeholder="こたえをにゅうりょく">
+      <button id="btn-ok">けってい</button>
+    </div>
+    <div class="numpad">
+      <button>1</button><button>2</button><button>3</button>
+      <button>4</button><button>5</button><button>6</button>
+      <button>7</button><button>8</button><button>9</button>
+      <button>←</button><button>0</button><button class="ok">OK</button>
+    </div>
+    <div id="skills"></div>
+    <div id="battle-log"></div>
+  </div>
+
+  <!-- 勝利リザルト -->
+  <section id="result" class="result">
+    <div class="card">
+      <h2 id="result-title">しょうり！</h2>
+      <p id="result-msg">てきを たおした！</p>
+      <button id="btn-next">つぎへすすむ</button>
+    </div>
+  </section>
+
+  <!-- 敗北リトライ -->
+  <section id="retry-dialog" class="result">
+    <div class="card">
+      <h2>まけてしまった…</h2>
+      <p>どうする？</p>
+      <button id="btn-retry-same">もういちど ちょうせん！</button>
+      <button id="btn-retry-prev">まえのステージで レベルアップ</button>
+    </div>
+  </section>
+
+  <!-- 警告ダイアログ -->
+  <section id="warning" class="result">
+    <div class="card">
+      <h2>ちゅうい！</h2>
+      <p id="warning-msg"></p>
+      <button id="btn-retry">いまのステージで レベルアップ</button>
+      <button id="btn-force">そのまま たたかう！</button>
+    </div>
+  </section>
+
+  <!-- AUDIO -->
+  <audio id="bgm" loop><source src="music/battle.mp3" type="audio/mpeg"></audio>
+  <audio id="se-attack"><source src="music/attacks.mp3" type="audio/mpeg"></audio>
+  <audio id="se-hurt"><source src="music/hurt.mp3" type="audio/mpeg"></audio>
+  <audio id="se-special"><source src="music/special-attacks.mp3" type="audio/mpeg"></audio>
+  <audio id="se-fire"><source src="music/se-fire.mp3" type="audio/mpeg"></audio>
+  <audio id="se-ice"><source src="music/se-ice.mp3" type="audio/mpeg"></audio>
+  <audio id="se-wind"><source src="music/se-wind.mp3" type="audio/mpeg"></audio>
+  <audio id="se-heal"><source src="music/se-heal.mp3" type="audio/mpeg"></audio>
+  <audio id="se-thunder"><source src="music/se-thunder.mp3" type="audio/mpeg"></audio>
+  <audio id="se-cosmic"><source src="music/se-cosmic.mp3" type="audio/mpeg"></audio>
+  <audio id="se-slash"><source src="music/se-slash.mp3" type="audio/mpeg"></audio>
+  <audio id="se-encounter"><source src="music/encounter.mp3" type="audio/mpeg"></audio>
+  <audio id="se-victory"><source src="music/victory.mp3" type="audio/mpeg"></audio>
+  <audio id="se-defeat"><source src="music/defeat.mp3" type="audio/mpeg"></audio>
+
+  <script src="js/level.js"></script>
+  <script src="js/battle.js"></script>
+</body>
+</html>
